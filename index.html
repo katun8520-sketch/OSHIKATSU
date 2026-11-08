@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#000">
+<title>推し活 第一章</title><link rel="stylesheet" href="style.css">
+<style>
+/* 滿版：畫面填滿整個螢幕，出擊按鈕用畫面高度（cqh）決定大小 */
+.player{width:100%;height:100%;aspect-ratio:auto;container-type:size}
+#game{width:100%;height:100%}
+.sjoy{width:36cqh;height:36cqh;left:max(2%,env(safe-area-inset-left))}
+.sb{width:16cqh;height:16cqh;font-size:clamp(11px,3cqh,20px)}
+.sb-atk{width:21cqh;height:21cqh}
+.sb-act{width:21cqh;height:14cqh;border-radius:7cqh;font-size:clamp(10px,2.5cqh,17px);right:calc(4% + 22cqh)}
+.sb-drop{width:13cqh;height:13cqh;right:calc(4% + 44cqh)}
+.sb-run{right:calc(3% + 25cqh)}
+.sb-map,.sb-pause{width:11.5cqh;height:11.5cqh}.sb-pause{right:calc(2% + 14cqh)}
+.dialog{max-width:900px;margin:0 auto}
+.title{overflow:auto;padding:3cqh 0}
+.title small{font-size:clamp(9px,2cqh,13px)}
+.title h1{font-size:16cqh;margin:0 0 .5cqh;letter-spacing:2cqh;text-shadow:.7cqh .7cqh 0 #48333b}
+.title p{font-size:clamp(11px,3.2cqh,18px);margin:0 0 3cqh}
+.title .pbtn{font-size:clamp(13px,3.6cqh,22px);min-height:0;padding:1.4cqh 2cqh}
+/* 主選單 */
+.menu,.slots{display:flex;flex-direction:column;align-items:center;gap:1.8cqh;width:min(420px,80%)}
+.mbtn{width:100%;display:flex;flex-direction:column;align-items:center;gap:.4cqh;padding:1.6cqh 2cqh;background:transparent;border:2px solid #555;color:#eee;cursor:pointer;font-family:inherit}
+.mbtn b{font:900 clamp(15px,4cqh,24px) serif;letter-spacing:.3em}
+.mbtn small{font-size:clamp(10px,2.4cqh,14px);color:#999;letter-spacing:.05em}
+.mbtn:not(:disabled):hover,.mbtn:not(:disabled):focus-visible{border-color:var(--pink);color:var(--pink);outline:none}
+.mbtn:disabled{opacity:.35;cursor:default}
+.mbtn.warn{border-color:#c24f7a}.mbtn.warn b{color:#ff9fc0}
+.mbtn.small{padding:1cqh 2cqh}.mbtn.small b{font-size:clamp(13px,3cqh,18px)}
+.loading{color:#888!important;margin:0!important;font-size:clamp(11px,2.6cqh,15px)!important}
+.slots h3{margin:0;font:900 clamp(16px,4.4cqh,26px) serif;letter-spacing:.3em;color:#f3eee8}
+.menu[hidden],.slots[hidden],.loading[hidden]{display:none!important}
+#slotList{display:flex;flex-direction:column;gap:1.4cqh;width:100%}
+.title.slotmode>h1,.title.slotmode>small,.title.slotmode>p{display:none}
+.title .mbtn small{font:clamp(10px,2.4cqh,14px) sans-serif;letter-spacing:.05em;color:#999}
+</style></head>
+<body>
+<main class="stage">
+ <section class="player" id="playerFrame">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div class="hud">
+   <div class="hud-left"><b id="hudChapter">第1章｜初次約會</b><span id="hudGoal"></span><span id="hudZone">專業廚房</span></div>
+   <div class="hud-right">
+    <span title="冷凍櫃庫存">🧊 <b id="hudStock">0/5</b></span>
+    <span title="親密度" class="aff">♥ <b id="hudAff">0%</b></span>
+    <span title="紙板鋼彈">裝甲 <b id="hudArmor">LV1</b></span>
+    <span title="紙箱"><img class="ico" src="assets/ui/icon_box.png" alt="紙箱"> <b id="hudBox">0</b></span>
+    <span title="膠帶"><img class="ico" src="assets/ui/icon_tape.png" alt="膠帶"> <b id="hudTape">0</b></span>
+   </div>
+  </div>
+
+  <div id="dialog" class="dialog" hidden><div id="dlgName" class="name"></div><div id="dlgText" class="text"></div><i class="more">▼</i></div>
+
+  <div id="panel" class="panel" hidden><div class="pbox">
+   <button id="pnlClose" class="x" aria-label="關閉">×</button>
+   <h2 id="pnlTitle"></h2><div id="pnlBody" class="pbody"></div><div id="pnlButtons" class="pbtns"></div>
+  </div></div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <div class="touchpad">
+   <button id="tLeft" class="tb dir" aria-label="向左">◀</button><button id="tRight" class="tb dir" aria-label="向右">▶</button>
+   <button id="tAct" class="tb act">互動</button><button id="tPause" class="tb pause" aria-label="暫停">Ⅱ</button>
+  </div>
+
+  <div id="pause" class="overlay" hidden><div class="pbox center">
+   <h2>暫停</h2>
+   <p class="muted">電腦：A／D 或方向鍵移動・E 互動・Esc 暫停<br>手機：左下 ◀ ▶ 移動・右下按鈕互動</p>
+   <div class="pbtns"><button id="btnResume" class="pbtn primary"><b>繼續</b></button><button id="btnSave" class="pbtn"><b>存檔</b></button><button id="btnMenu" class="pbtn"><b>回主選單</b></button></div>
+  </div></div>
+
+  <div id="title" class="overlay title">
+   <small>A DEVOTION THAT NEVER DIES</small><h1>推し活</h1><p>第一章　初次約會</p>
+   <div id="menu" class="menu">
+    <p id="loadLabel" class="loading">載入素材中…</p>
+    <button id="mContinue" class="mbtn" disabled><b>繼續玩</b><small id="mContinueSub">沒有存檔</small></button>
+    <button id="mNew" class="mbtn" disabled><b>重新開始</b><small id="mNewSub">從序章開始</small></button>
+    <button id="mLoad" class="mbtn" disabled><b>讀取進度</b><small>選擇手動存檔</small></button>
+   </div>
+   <div id="slots" class="slots" hidden><h3 id="slotsTitle">讀取進度</h3><div id="slotList"></div><button id="slotsBack" class="mbtn small"><b>返回</b></button></div>
+  </div>
+ </section>
+</main>
+<script src="js/config.js"></script><script src="js/save.js"></script><script src="js/art.js"></script><script src="js/frames.js"></script><script src="js/sprites.js"></script><script src="js/world.js"></script>
+<script src="js/audio.js"></script><script src="js/ui.js"></script><script src="js/cutscenes.js"></script><script src="js/sortie_config.js"></script><script src="js/sortie_map.js"></script><script src="js/sortie_sprites.js"></script><script src="js/sortie_ai.js"></script><script src="js/comic.js"></script><script src="js/cook.js"></script><script src="js/story.js"></script><script src="js/sortie_death.js"></script><script src="js/sortie.js"></script>
+<script src="js/main.js"></script>
+</body></html>
